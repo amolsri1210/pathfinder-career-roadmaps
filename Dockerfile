@@ -10,6 +10,7 @@ ARG FIREBASE_AUTH_DOMAIN
 ARG FIREBASE_PROJECT_ID=pathfinder-4de02
 ARG FIREBASE_MESSAGING_SENDER_ID
 ARG FIREBASE_APP_ID
+ARG FIREBASE_APPCHECK_SITE_KEY
 
 # Download dependencies
 COPY pubspec.yaml pubspec.lock ./
@@ -28,7 +29,8 @@ RUN test -n "$FIREBASE_API_KEY" \
       --dart-define="FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}" \
       --dart-define="FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}" \
       --dart-define="FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}" \
-      --dart-define="FIREBASE_APP_ID=${FIREBASE_APP_ID}"
+      --dart-define="FIREBASE_APP_ID=${FIREBASE_APP_ID}" \
+      --dart-define="FIREBASE_APPCHECK_SITE_KEY=${FIREBASE_APPCHECK_SITE_KEY}"
 
 # Stage 2: Production Nginx image for Google Cloud Run
 FROM nginx:alpine

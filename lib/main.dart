@@ -2834,9 +2834,7 @@ Learner question: $question'''),
       final normalizedDetail = detail.toLowerCase();
       final appCheckFailed =
           normalizedDetail.contains('app check') ||
-          normalizedDetail.contains('permission_denied') ||
-          normalizedDetail.contains('permission-denied') ||
-          normalizedDetail.contains('403');
+          normalizedDetail.contains('appcheck');
       final message = detail.contains('Firebase is not configured')
           ? _roadmapBasedFallback(
               'AI guidance is not connected in this build yet.',

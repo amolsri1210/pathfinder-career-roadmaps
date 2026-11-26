@@ -472,9 +472,7 @@ Latest user question (answer this directly): $prompt
       final errorDetail = error.toString().toLowerCase();
       final appCheckFailed =
           errorDetail.contains('app check') ||
-          errorDetail.contains('permission_denied') ||
-          errorDetail.contains('permission-denied') ||
-          errorDetail.contains('403');
+          errorDetail.contains('appcheck');
       final availabilityNote = error is TimeoutException
           ? '\n\nThe AI service took too long to respond. Please try again in a moment.'
           : appCheckFailed
