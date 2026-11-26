@@ -1,5 +1,21 @@
 # Stage 1: Build Flutter Web application
-FROM ghcr.io/cirruslabs/flutter:stable AS build
+# Install the pinned official SDK archive. The floating Cirrus Labs `stable`
+# image can lag Flutter releases and may not satisfy the Dart constraint.
+FROM debian:bookworm-slim AS build
+
+ARG FLUTTER_VERSION=3.50.1
+ARG FLUTTER_ARCHIVE_SHA256=4ad17fc8462fbcef2ba19ff4a78c0a16b7147fde1add8578e267ea62cdb92678
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl git libglu1-mesa unzip xz-utils zip \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" -o /tmp/flutter.tar.xz \
+    && echo "${FLUTTER_ARCHIVE_SHA256}  /tmp/flutter.tar.xz" | sha256sum -c - \
+    && mkdir -p /opt/flutter \
+    && tar -xf /tmp/flutter.tar.xz -C /opt/flutter --strip-components=1 \
+    && rm /tmp/flutter.tar.xz
+
+ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
 WORKDIR /app
 
