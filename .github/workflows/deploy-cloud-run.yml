@@ -99,4 +99,5 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account: pathfinder-cloud-run-runtime@pathfinder-4de02.iam.gserviceaccount.com
           flags: '--allow-unauthenticated'
