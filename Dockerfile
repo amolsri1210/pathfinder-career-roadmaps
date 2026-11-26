@@ -13,6 +13,7 @@ RUN apt-get update \
     && echo "${FLUTTER_ARCHIVE_SHA256}  /tmp/flutter.tar.xz" | sha256sum -c - \
     && mkdir -p /opt/flutter \
     && tar -xf /tmp/flutter.tar.xz -C /opt/flutter --strip-components=1 \
+    && git config --global --add safe.directory /opt/flutter \
     && rm /tmp/flutter.tar.xz
 
 ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}"
