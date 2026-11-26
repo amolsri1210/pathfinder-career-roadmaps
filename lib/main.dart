@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -282,9 +283,8 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/skills-gap',
-          builder: (_, s) => SkillGapPage(
-            initialCareerId: s.uri.queryParameters['career'],
-          ),
+          builder: (_, s) =>
+              SkillGapPage(initialCareerId: s.uri.queryParameters['career']),
         ),
         GoRoute(path: '/journey', builder: (_, _) => const JourneyPage()),
         GoRoute(path: '/saved', builder: (_, _) => const SavedPage()),
@@ -545,7 +545,14 @@ class AppShell extends ConsumerWidget {
           ? NavigationBar(
               selectedIndex: tab,
               onDestinationSelected: (i) => context.go(
-                ['/', '/explore', '/skills-gap', '/journey', '/saved', '/profile'][i],
+                [
+                  '/',
+                  '/explore',
+                  '/skills-gap',
+                  '/journey',
+                  '/saved',
+                  '/profile',
+                ][i],
               ),
               destinations: const [
                 NavigationDestination(
@@ -1211,7 +1218,11 @@ class HomePage extends ConsumerWidget {
                             const SizedBox(height: 6),
                             const Text(
                               'Our interactive diagnostic compares your current competencies against 43 career pathways, calculating your role-readiness score, missing gaps, and recalibrated learning runway.',
-                              style: TextStyle(color: Color(0xffe2e8f0), fontSize: 14, height: 1.45),
+                              style: TextStyle(
+                                color: Color(0xffe2e8f0),
+                                fontSize: 14,
+                                height: 1.45,
+                              ),
                             ),
                           ],
                         ),
@@ -1223,9 +1234,14 @@ class HomePage extends ConsumerWidget {
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xff094440),
-                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 16,
+                          ),
                           shape: const StadiumBorder(),
-                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -1633,13 +1649,20 @@ class CareerPage extends ConsumerWidget {
                             context.go('/journey');
                           }, icon: Icons.route),
                           FilledButton.icon(
-                            onPressed: () => context.go('/skills-gap?career=$id'),
-                            icon: const Icon(Icons.psychology_outlined, size: 18),
+                            onPressed: () =>
+                                context.go('/skills-gap?career=$id'),
+                            icon: const Icon(
+                              Icons.psychology_outlined,
+                              size: 18,
+                            ),
                             label: const Text('Check Skill Gap'),
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xff10b981),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 15,
+                              ),
                               shape: const StadiumBorder(),
                             ),
                           ),
@@ -2714,6 +2737,31 @@ Roadmap stages:
 $stages''';
   }
 
+  String _roadmapBasedFallback(String status) {
+    final nextTasks = <String>[];
+    for (final stage in widget.stages) {
+      final tasks = stage['tasks'] as List? ?? const [];
+      for (final rawTask in tasks) {
+        if (rawTask is! Map) continue;
+        final task = Map<String, dynamic>.from(rawTask);
+        final taskId = task['id']?.toString();
+        final title = task['title']?.toString().trim() ?? '';
+        if (title.isEmpty ||
+            (taskId != null && widget.completedTaskIds.contains(taskId))) {
+          continue;
+        }
+        nextTasks.add(title);
+        if (nextTasks.length == 2) break;
+      }
+      if (nextTasks.length == 2) break;
+    }
+
+    final nextStep = nextTasks.isEmpty
+        ? 'Review the roadmap stages and choose one task that matches a skill you want to strengthen.'
+        : 'Start with ${nextTasks.join(' and then ')}.';
+    return '$status\n\nFor ${widget.career['name']}, $nextStep Use the task outcome as a check that you can apply the skill, not only explain it.';
+  }
+
   Future<void> _send([String? suggestedPrompt]) async {
     final question = (suggestedPrompt ?? _inputController.text).trim();
     if (question.isEmpty || _sending) return;
@@ -2722,15 +2770,16 @@ $stages''';
       _messages.add((fromUser: true, text: question));
       _sending = true;
     });
+    final answer = StringBuffer();
     try {
       if (Firebase.apps.isEmpty) {
         throw StateError('Firebase is not configured for this build.');
       }
       final model = FirebaseAI.googleAI().generativeModel(
-        model: 'gemini-3.6-flash',
+        model: 'gemini-3.8-flash',
         generationConfig: GenerationConfig(
           temperature: 0.4,
-          maxOutputTokens: 1200,
+          maxOutputTokens: 500,
         ),
         systemInstruction: Content.system(
           'You are Pathfinder’s AI Career Guide. Give supportive, practical, concise career guidance for the career in the context. '
@@ -2740,24 +2789,69 @@ $stages''';
         ),
       );
       _chat ??= model.startChat();
-      final response = await _chat!.sendMessage(
-        Content.text('''Current Pathfinder context:
+      await for (final response
+          in _chat!
+              .sendMessageStream(
+                Content.text('''Current Pathfinder context:
 $_careerContext
 
 Learner question: $question'''),
-      );
-      final answer = response.text?.trim();
-      if (answer == null || answer.isEmpty) {
+              )
+              .timeout(const Duration(seconds: 30))) {
+        final chunk = response.text ?? '';
+        if (chunk.isEmpty) continue;
+        answer.write(chunk);
+        if (!mounted) return;
+        setState(() {
+          if (_messages.isNotEmpty && !_messages.last.fromUser) {
+            final last = _messages.last;
+            _messages[_messages.length - 1] = (
+              fromUser: false,
+              text: '${last.text}$chunk',
+            );
+          } else {
+            _messages.add((fromUser: false, text: chunk));
+          }
+        });
+      }
+      if (answer.toString().trim().isEmpty) {
         throw StateError('The AI guide returned an empty response.');
       }
-      if (!mounted) return;
-      setState(() => _messages.add((fromUser: false, text: answer)));
     } catch (error) {
+      _chat = null;
       if (!mounted) return;
+      if (!answer.isEmpty) {
+        setState(
+          () => _messages.add((
+            fromUser: false,
+            text:
+                'The response was interrupted before it finished. Please try again for a complete answer.',
+          )),
+        );
+        return;
+      }
       final detail = error.toString();
+      final normalizedDetail = detail.toLowerCase();
+      final appCheckFailed =
+          normalizedDetail.contains('app check') ||
+          normalizedDetail.contains('permission_denied') ||
+          normalizedDetail.contains('permission-denied') ||
+          normalizedDetail.contains('403');
       final message = detail.contains('Firebase is not configured')
-          ? 'AI guidance is not connected in this build yet. Configure Firebase AI Logic for the Pathfinder Firebase project, then try again.'
-          : 'I couldn’t reach the AI guide just now. Check that Firebase AI Logic is enabled for this project and try again.';
+          ? _roadmapBasedFallback(
+              'AI guidance is not connected in this build yet.',
+            )
+          : error is TimeoutException
+          ? _roadmapBasedFallback(
+              'The AI guide took too long to respond. Here is a roadmap-based next step while it is unavailable.',
+            )
+          : appCheckFailed
+          ? _roadmapBasedFallback(
+              'Firebase App Check blocked the AI request. Check the production App Check configuration and authorized site key.',
+            )
+          : _roadmapBasedFallback(
+              'The AI guide could not reach Firebase AI Logic. Check that it is enabled for this project.',
+            );
       setState(() => _messages.add((fromUser: false, text: message)));
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -4661,9 +4755,9 @@ class ProfilePage extends ConsumerWidget {
                                 if (user == null)
                                   FilledButton.tonal(
                                     onPressed: () => showDialog(
-                                        context: context,
-                                        builder: (_) => const AuthDialog(),
-                                      ),
+                                      context: context,
+                                      builder: (_) => const AuthDialog(),
+                                    ),
                                     child: const Text('Sign in'),
                                   ),
                               ],
@@ -4674,7 +4768,10 @@ class ProfilePage extends ConsumerWidget {
                                 children: [
                                   avatar,
                                   const SizedBox(height: 14),
-                                  SizedBox(width: double.infinity, child: details),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: details,
+                                  ),
                                   const SizedBox(height: 16),
                                   actions,
                                 ],
@@ -5150,12 +5247,18 @@ class ProfilePage extends ConsumerWidget {
                                 if (user != null)
                                   TextButton.icon(
                                     onPressed: () async {
-                                      if (user.isFirebase && Firebase.apps.isNotEmpty) {
+                                      if (user.isFirebase &&
+                                          Firebase.apps.isNotEmpty) {
                                         await FirebaseAuth.instance.signOut();
                                       } else {
                                         final box = Hive.box('pathfinder');
                                         box.delete('localUser');
-                                        ref.read(localUserProvider.notifier).state = null;
+                                        ref
+                                                .read(
+                                                  localUserProvider.notifier,
+                                                )
+                                                .state =
+                                            null;
                                       }
                                     },
                                     icon: const Icon(Icons.logout),
@@ -5163,8 +5266,11 @@ class ProfilePage extends ConsumerWidget {
                                   ),
                                 if (user != null)
                                   TextButton.icon(
-                                    onPressed: () =>
-                                        _confirmDeleteAccount(context, ref, user),
+                                    onPressed: () => _confirmDeleteAccount(
+                                      context,
+                                      ref,
+                                      user,
+                                    ),
                                     icon: const Icon(
                                       Icons.delete_outline,
                                       color: Colors.red,
@@ -5317,9 +5423,11 @@ Future<void> _editProfile(
             } else if (user != null && !user.isFirebase) {
               // Update local user record
               final box = Hive.box('pathfinder');
-              final localUser = (box.get('localUser') as Map?)?.map(
-                (k, v) => MapEntry(k.toString(), v.toString()),
-              ) ?? <String, String>{};
+              final localUser =
+                  (box.get('localUser') as Map?)?.map(
+                    (k, v) => MapEntry(k.toString(), v.toString()),
+                  ) ??
+                  <String, String>{};
               localUser['displayName'] = name;
               box.put('localUser', localUser);
               ref.read(localUserProvider.notifier).state = localUser;
@@ -5400,7 +5508,10 @@ Future<void> _editWeeklyGoal(
   );
 }
 
-Future<void> _syncUserField(AppUserInfo? user, Map<String, dynamic> fields) async {
+Future<void> _syncUserField(
+  AppUserInfo? user,
+  Map<String, dynamic> fields,
+) async {
   if (user == null || !user.isFirebase || Firebase.apps.isEmpty) return;
   await FirebaseFirestore.instance
       .collection('users')
@@ -5462,8 +5573,9 @@ Future<void> _confirmDeleteAccount(
       if (firebaseUser == null) {
         throw StateError('No signed-in Firebase user to delete.');
       }
-      final root =
-          FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid);
+      final root = FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid);
       final tracks = await root.collection('careerTracks').get();
       for (final track in tracks.docs) {
         final tasks = await track.reference.collection('taskProgress').get();
@@ -5692,7 +5804,10 @@ class _AuthDialogState extends ConsumerState<AuthDialog> {
       if (existingUsers.keys.any(
         (stored) => stored.toLowerCase() == enteredEmail.toLowerCase(),
       )) {
-        setState(() => error = 'An account with this email already exists. Try signing in instead.');
+        setState(
+          () => error =
+              'An account with this email already exists. Try signing in instead.',
+        );
         return null;
       }
       existingUsers[enteredEmail] = {
@@ -5708,7 +5823,9 @@ class _AuthDialogState extends ConsumerState<AuthDialog> {
     } else {
       final account = existingUsers[matchedEmail];
       if (account == null) {
-        setState(() => error = 'No account found with this email. Create one first.');
+        setState(
+          () => error = 'No account found with this email. Create one first.',
+        );
         return null;
       }
       if (account['password'] != password.text) {
@@ -5781,7 +5898,8 @@ class _AuthDialogState extends ConsumerState<AuthDialog> {
     } catch (e) {
       if (mounted) {
         setState(
-          () => error = e.toString().replaceFirst('FirebaseAuthException: ', ''),
+          () =>
+              error = e.toString().replaceFirst('FirebaseAuthException: ', ''),
         );
       }
     } finally {
@@ -5799,73 +5917,80 @@ class _AuthDialogState extends ConsumerState<AuthDialog> {
       width: 400,
       child: SingleChildScrollView(
         child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (!_firebaseAvailable)
-            Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xfffff7ed),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xfffed7aa)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: Color(0xffc2410c), size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Running in local mode. Your account is stored in this browser only.',
-                      style: TextStyle(fontSize: 12, color: Color(0xffc2410c)),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!_firebaseAvailable)
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xfffff7ed),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xfffed7aa)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Color(0xffc2410c),
+                      size: 18,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Running in local mode. Your account is stored in this browser only.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xffc2410c),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          if (register)
+            if (register)
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(
+                  labelText: 'Your name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            const SizedBox(height: 12),
             TextField(
-              controller: name,
+              controller: email,
+              keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
-                labelText: 'Your name',
+                labelText: 'Email',
                 border: OutlineInputBorder(),
               ),
             ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: email,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: password,
-            obscureText: true,
-            onSubmitted: (_) {
-              if (!busy) submit();
-            },
-            decoration: const InputDecoration(
-              labelText: 'Password',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          if (error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(error!, style: const TextStyle(color: Colors.red)),
-            ),
-          if (_firebaseAvailable) ...[
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: busy ? null : () => submit(google: true),
-              icon: const Icon(Icons.account_circle_outlined),
-              label: const Text('Continue with Google'),
+            TextField(
+              controller: password,
+              obscureText: true,
+              onSubmitted: (_) {
+                if (!busy) submit();
+              },
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
             ),
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(error!, style: const TextStyle(color: Colors.red)),
+              ),
+            if (_firebaseAvailable) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: busy ? null : () => submit(google: true),
+                icon: const Icon(Icons.account_circle_outlined),
+                label: const Text('Continue with Google'),
+              ),
+            ],
           ],
-        ],
         ),
       ),
     ),

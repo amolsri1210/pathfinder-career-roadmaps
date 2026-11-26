@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,12 +9,42 @@ import 'package:firebase_ai/firebase_ai.dart';
 import 'main.dart';
 
 enum SkillProficiency {
-  none(0.0, 'None', 'No experience', Icons.radio_button_unchecked, Color(0xff94a3b8)),
-  basic(0.33, 'Basic', 'Foundational / Theory', Icons.school_outlined, Color(0xff3b82f6)),
-  intermediate(0.66, 'Hands-on', 'Built real projects', Icons.build_circle_outlined, Color(0xff8b5cf6)),
-  advanced(1.0, 'Proficient', 'Production-ready', Icons.verified_outlined, Color(0xff10b981));
+  none(
+    0.0,
+    'None',
+    'No experience',
+    Icons.radio_button_unchecked,
+    Color(0xff94a3b8),
+  ),
+  basic(
+    0.33,
+    'Basic',
+    'Foundational / Theory',
+    Icons.school_outlined,
+    Color(0xff3b82f6),
+  ),
+  intermediate(
+    0.66,
+    'Hands-on',
+    'Built real projects',
+    Icons.build_circle_outlined,
+    Color(0xff8b5cf6),
+  ),
+  advanced(
+    1.0,
+    'Proficient',
+    'Production-ready',
+    Icons.verified_outlined,
+    Color(0xff10b981),
+  );
 
-  const SkillProficiency(this.value, this.label, this.description, this.icon, this.color);
+  const SkillProficiency(
+    this.value,
+    this.label,
+    this.description,
+    this.icon,
+    this.color,
+  );
   final double value;
   final String label;
   final String description;
@@ -49,8 +80,10 @@ class SkillGapItem {
   }
 
   bool get isMastered => userProficiency.value >= targetValue;
-  bool get isCriticalGap => type == 'core' && userProficiency.value < targetValue;
-  bool get isSecondaryGap => type != 'core' && userProficiency.value < targetValue;
+  bool get isCriticalGap =>
+      type == 'core' && userProficiency.value < targetValue;
+  bool get isSecondaryGap =>
+      type != 'core' && userProficiency.value < targetValue;
 }
 
 class SkillGapReport {
@@ -72,9 +105,12 @@ class SkillGapReport {
   final int weeklyHours;
   final String additionalNotes;
 
-  List<SkillGapItem> get masteredSkills => items.where((i) => i.isMastered).toList();
-  List<SkillGapItem> get criticalGaps => items.where((i) => i.isCriticalGap).toList();
-  List<SkillGapItem> get secondaryGaps => items.where((i) => i.isSecondaryGap).toList();
+  List<SkillGapItem> get masteredSkills =>
+      items.where((i) => i.isMastered).toList();
+  List<SkillGapItem> get criticalGaps =>
+      items.where((i) => i.isCriticalGap).toList();
+  List<SkillGapItem> get secondaryGaps =>
+      items.where((i) => i.isSecondaryGap).toList();
 
   int get readinessScore {
     if (items.isEmpty) return 0;
@@ -83,7 +119,10 @@ class SkillGapReport {
     for (final item in items) {
       final weight = item.type == 'core' ? 1.6 : 1.0;
       totalWeight += weight;
-      final ratio = (item.userProficiency.value / item.targetValue).clamp(0.0, 1.0);
+      final ratio = (item.userProficiency.value / item.targetValue).clamp(
+        0.0,
+        1.0,
+      );
       earnedWeight += weight * ratio;
     }
     double score = (earnedWeight / totalWeight) * 100;
@@ -117,8 +156,12 @@ class SkillGapReport {
     // Standard baseline assumes ~12 hrs/week.
     final hoursMultiplier = (12.0 / weeklyHours.clamp(5, 40)).clamp(0.5, 2.0);
 
-    final rawMinWeeks = (minMonths * 4.3 * remainingRatio * hoursMultiplier).round().clamp(2, 60);
-    final rawMaxWeeks = (maxMonths * 4.3 * remainingRatio * hoursMultiplier).round().clamp(rawMinWeeks, 80);
+    final rawMinWeeks = (minMonths * 4.3 * remainingRatio * hoursMultiplier)
+        .round()
+        .clamp(2, 60);
+    final rawMaxWeeks = (maxMonths * 4.3 * remainingRatio * hoursMultiplier)
+        .round()
+        .clamp(rawMinWeeks, 80);
 
     if (rawMaxWeeks <= 4) {
       return '$rawMinWeeks–$rawMaxWeeks weeks (Immediate prep)';
@@ -132,7 +175,8 @@ class SkillGapReport {
   }
 
   List<String> get skippableStages {
-    final stages = (roadmap['stages'] as List? ?? []).cast<Map<String, dynamic>>();
+    final stages = (roadmap['stages'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
     if (stages.isEmpty) return [];
     final skippable = <String>[];
 
@@ -147,7 +191,8 @@ class SkillGapReport {
   }
 
   Map<String, dynamic>? get recommendedStartingStage {
-    final stages = (roadmap['stages'] as List? ?? []).cast<Map<String, dynamic>>();
+    final stages = (roadmap['stages'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
     if (stages.isEmpty) return null;
     if (readinessScore >= 75 && stages.length >= 3) {
       return stages[2]; // Jump to Advanced / Applied Projects
@@ -191,11 +236,7 @@ class _SkillGapPageState extends ConsumerState<SkillGapPage> {
     'Experienced Professional Upskilling',
   ];
 
-  final List<String> _experienceOptions = [
-    '< 1 year',
-    '1-3 years',
-    '3+ years',
-  ];
+  final List<String> _experienceOptions = ['< 1 year', '1-3 years', '3+ years'];
 
   @override
   void initState() {
@@ -211,7 +252,8 @@ class _SkillGapPageState extends ConsumerState<SkillGapPage> {
   }
 
   void _initRatingsForCareer(Map<String, dynamic> career) {
-    final skills = (career['skills'] as List? ?? []).cast<Map<String, dynamic>>();
+    final skills = (career['skills'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
     for (final skill in skills) {
       final id = skill['id'] as String;
       _userRatings.putIfAbsent(id, () => SkillProficiency.none);
@@ -220,7 +262,8 @@ class _SkillGapPageState extends ConsumerState<SkillGapPage> {
 
   void _autofillFromProgress(Map<String, dynamic> career, WidgetRef ref) {
     final checked = ref.read(progressProvider)[career['id']] ?? <String>{};
-    final skills = (career['skills'] as List? ?? []).cast<Map<String, dynamic>>();
+    final skills = (career['skills'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
 
     setState(() {
       for (var i = 0; i < skills.length; i++) {
@@ -258,7 +301,8 @@ class _SkillGapPageState extends ConsumerState<SkillGapPage> {
   void _generateReport(Map<String, dynamic> record) {
     final career = record['career'] as Map<String, dynamic>;
     final roadmap = record['roadmap'] as Map<String, dynamic>;
-    final rawSkills = (career['skills'] as List? ?? []).cast<Map<String, dynamic>>();
+    final rawSkills = (career['skills'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
 
     final items = rawSkills.map((s) {
       final id = s['id'] as String;
@@ -290,17 +334,30 @@ class _SkillGapPageState extends ConsumerState<SkillGapPage> {
 
   void _initAgentDiscussion(SkillGapReport report) {
     _agentMessages.clear();
-    final topGaps = report.criticalGaps.take(2).map((g) => g.name).join(' and ');
+    final topGaps = report.criticalGaps
+        .take(2)
+        .map((g) => g.name)
+        .join(' and ');
     final initialMessage = StringBuffer()
-      ..write('Hello! I’ve analyzed your skills profile against **${report.career['name']}**.\n\n')
-      ..write('• **Overall Readiness:** ${report.readinessScore}% (${report.readinessTier})\n')
-      ..write('• **Estimated Runway:** ${report.recalibratedTimeline} at ${report.weeklyHours} hrs/week\n');
+      ..write(
+        'Hello! I’ve analyzed your skills profile against **${report.career['name']}**.\n\n',
+      )
+      ..write(
+        '• **Overall Readiness:** ${report.readinessScore}% (${report.readinessTier})\n',
+      )
+      ..write(
+        '• **Estimated Runway:** ${report.recalibratedTimeline} at ${report.weeklyHours} hrs/week\n',
+      );
 
     if (topGaps.isNotEmpty) {
       initialMessage.write('• **Immediate Focus Areas:** $topGaps\n\n');
-      initialMessage.write('Ask me below about how to bridge these gaps, portfolio project ideas, or interview questions on these skills!');
+      initialMessage.write(
+        'Ask me below about how to bridge these gaps, portfolio project ideas, or interview questions on these skills!',
+      );
     } else {
-      initialMessage.write('\nYou already have an exceptional match for this pathway! Ask me about portfolio specialization and interview readiness.');
+      initialMessage.write(
+        '\nYou already have an exceptional match for this pathway! Ask me about portfolio specialization and interview readiness.',
+      );
     }
 
     _agentMessages.add((fromUser: false, text: initialMessage.toString()));
@@ -316,14 +373,17 @@ class _SkillGapPageState extends ConsumerState<SkillGapPage> {
       _agentSending = true;
     });
 
+    final answer = StringBuffer();
     final report = _generatedReport!;
     final career = report.career;
-    final skillsContext = report.items.map((skill) {
-      final target = skill.requiredLevel;
-      final proficiency = skill.userProficiency.label;
-      final kind = skill.type == 'core' ? 'core' : 'supporting';
-      return '- ${skill.name}: $kind skill; target $target; learner rating $proficiency';
-    }).join('\n');
+    final skillsContext = report.items
+        .map((skill) {
+          final target = skill.requiredLevel;
+          final proficiency = skill.userProficiency.label;
+          final kind = skill.type == 'core' ? 'core' : 'supporting';
+          return '- ${skill.name}: $kind skill; target $target; learner rating $proficiency';
+        })
+        .join('\n');
     final roadmapContext = (report.roadmap['stages'] as List? ?? const [])
         .map((rawStage) {
           final stage = rawStage as Map<String, dynamic>;
@@ -332,7 +392,8 @@ class _SkillGapPageState extends ConsumerState<SkillGapPage> {
           return '- $title: $outcome';
         })
         .join('\n');
-    final contextPrompt = '''
+    final contextPrompt =
+        '''
 Learner's target field/career: ${career['name']} (${career['category']})
 Field overview: ${career['summary']}
 Readiness Score: ${report.readinessScore}% (${report.readinessTier})
@@ -351,8 +412,11 @@ Latest user question (answer this directly): $prompt
     try {
       if (Firebase.apps.isNotEmpty) {
         final model = FirebaseAI.googleAI().generativeModel(
-          model: 'gemini-3.6-flash',
-          generationConfig: GenerationConfig(temperature: 0.35, maxOutputTokens: 900),
+          model: 'gemini-3.8-flash',
+          generationConfig: GenerationConfig(
+            temperature: 0.35,
+            maxOutputTokens: 500,
+          ),
           systemInstruction: Content.system(
             'You are Pathfinder’s field-aware learning and skill-gap agent. '
             'Answer every user question directly and make the subject they ask about the focus of the reply. '
@@ -364,19 +428,65 @@ Latest user question (answer this directly): $prompt
             'Keep replies concise (3-5 short paragraphs), structured with bullets where useful, and practical.',
           ),
         );
-        final response = await model.generateContent([Content.text(contextPrompt)]);
-        final answer = response.text?.trim();
-        if (answer != null && answer.isNotEmpty) {
-          if (mounted) setState(() => _agentMessages.add((fromUser: false, text: answer)));
-          return;
+        await for (final response
+            in model
+                .generateContentStream([Content.text(contextPrompt)])
+                .timeout(const Duration(seconds: 30))) {
+          final chunk = response.text ?? '';
+          if (chunk.isEmpty) continue;
+          answer.write(chunk);
+          if (!mounted) return;
+          setState(() {
+            if (_agentMessages.isNotEmpty && !_agentMessages.last.fromUser) {
+              final last = _agentMessages.last;
+              _agentMessages[_agentMessages.length - 1] = (
+                fromUser: false,
+                text: '${last.text}$chunk',
+              );
+            } else {
+              _agentMessages.add((fromUser: false, text: chunk));
+            }
+          });
         }
+        if (answer.toString().trim().isEmpty) {
+          throw StateError('The AI agent returned an empty response.');
+        }
+        return;
       }
       throw StateError('Firebase AI not configured or empty response');
-    } catch (_) {
+    } catch (error) {
+      if (!answer.isEmpty) {
+        if (mounted) {
+          setState(
+            () => _agentMessages.add((
+              fromUser: false,
+              text:
+                  'The response was interrupted before it finished. Please try again for a complete answer.',
+            )),
+          );
+        }
+        return;
+      }
       // Be transparent instead of substituting unrelated gap advice when AI is unavailable.
       final fallbackResponse = _generateIntelligentFallback(prompt, report);
+      final errorDetail = error.toString().toLowerCase();
+      final appCheckFailed =
+          errorDetail.contains('app check') ||
+          errorDetail.contains('permission_denied') ||
+          errorDetail.contains('permission-denied') ||
+          errorDetail.contains('403');
+      final availabilityNote = error is TimeoutException
+          ? '\n\nThe AI service took too long to respond. Please try again in a moment.'
+          : appCheckFailed
+          ? '\n\nFirebase App Check rejected the AI request. Check the production App Check configuration and authorized site key.'
+          : '\n\nThe AI service is unavailable right now. Check Firebase AI Logic setup and try again.';
       if (mounted) {
-        setState(() => _agentMessages.add((fromUser: false, text: fallbackResponse)));
+        setState(
+          () => _agentMessages.add((
+            fromUser: false,
+            text: '$fallbackResponse$availabilityNote',
+          )),
+        );
       }
     } finally {
       if (mounted) setState(() => _agentSending = false);
@@ -385,7 +495,9 @@ Latest user question (answer this directly): $prompt
 
   String _generateIntelligentFallback(String prompt, SkillGapReport report) {
     final lower = prompt.toLowerCase();
-    final topGap = report.criticalGaps.isNotEmpty ? report.criticalGaps.first.name : 'core skills';
+    final topGap = report.criticalGaps.isNotEmpty
+        ? report.criticalGaps.first.name
+        : 'core skills';
 
     if (lower.contains('project') || lower.contains('portfolio')) {
       return '### Recommended Bridge Project for ${report.career['name']}\n\n'
@@ -393,15 +505,33 @@ Latest user question (answer this directly): $prompt
           '1. **Architectural Scope:** Build a service that integrates ${report.criticalGaps.take(2).map((g) => g.name).join(' with ')}.\n'
           '2. **Demonstrate Quality:** Write unit tests for core logic, use git feature branches, and include a comprehensive README with an architecture diagram.\n'
           '3. **Deployment:** Host it publicly (e.g. Firebase, Cloudflare, or Vercel) so hiring managers can interact with the live demo.';
-    } else if (lower.contains('interview') || lower.contains('question') || lower.contains('hiring')) {
+    } else if (lower.contains('interview') ||
+        lower.contains('question') ||
+        lower.contains('hiring')) {
       return '### Interview Preparation Advice for $topGap\n\n'
           'In technical screenings, interviewers test your understanding of trade-offs, not just syntax:\n'
           '• **Foundational Concept:** Be ready to explain *why* you chose a specific pattern or library over alternatives.\n'
           '• **Failure Modes:** How does your system handle invalid data, network timeouts, or high load?\n'
           '• **Storytelling:** Frame your project experience using STAR (Situation, Task, Action, Result) highlighting how you overcame a bug in $topGap.';
+    } else if (lower.contains('week') ||
+        lower.contains('schedule') ||
+        lower.contains('study')) {
+      final hours = report.weeklyHours;
+      final coreGaps = report.criticalGaps.take(3).map((g) => g.name).toList();
+      final focus = coreGaps.isEmpty
+          ? 'your next roadmap stage'
+          : coreGaps.join(', ');
+      final weeklyHours = (hours / 3).round();
+      final practiceHours = hours - weeklyHours * 2;
+      return '### A $hours-hour weekly plan for ${report.career['name']}\n\n'
+          'Focus first on **$focus**. Split your time into two $weeklyHours-hour learning sessions and one $practiceHours-hour project session. '
+          'Use the project session to apply the concepts, then review what you learned and update your skill ratings at the end of the week.';
     } else {
       final startingStage = report.recommendedStartingStage;
-      final stageName = startingStage?['title'] ?? startingStage?['name'] ?? 'the recommended starting stage';
+      final stageName =
+          startingStage?['title'] ??
+          startingStage?['name'] ??
+          'the recommended starting stage';
       return 'I couldn’t reach the AI answer service, so I can’t give a reliable answer to “$prompt” right now. '
           'For your selected field, **${report.career['name']}** (${report.career['category']}), the closest profile match is **$topGap**. '
           'Your readiness is ${report.readinessScore}%, and the roadmap recommends starting at **$stageName**. '
@@ -429,7 +559,9 @@ Latest user question (answer this directly): $prompt
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${report.career['name']} has been set as your active pathway in My Journey!'),
+        content: Text(
+          '${report.career['name']} has been set as your active pathway in My Journey!',
+        ),
         action: SnackBarAction(
           label: 'Go to Journey',
           onPressed: () => context.go('/journey'),
@@ -448,9 +580,11 @@ Latest user question (answer this directly): $prompt
       error: (err, _) => Center(child: Text('Error loading careers: $err')),
       data: (data) {
         final records = data.records;
-        if (records.isEmpty) return const Center(child: Text('No career data available'));
+        if (records.isEmpty)
+          return const Center(child: Text('No career data available'));
 
-        _selectedCareerId ??= widget.initialCareerId ?? records.first['career']['id'] as String;
+        _selectedCareerId ??=
+            widget.initialCareerId ?? records.first['career']['id'] as String;
         final currentRecord = records.firstWhere(
           (r) => r['career']['id'] == _selectedCareerId,
           orElse: () => records.first,
@@ -511,7 +645,11 @@ Latest user question (answer this directly): $prompt
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.psychology, color: Colors.white, size: 26),
+                child: const Icon(
+                  Icons.psychology,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
               const SizedBox(width: 12),
               pill('Interactive Skill Diagnostic Agent', color: Colors.white),
@@ -532,7 +670,11 @@ Latest user question (answer this directly): $prompt
             child: const Text(
               'Select your desired role, rate where you currently stand on essential competencies, '
               'and get an immediate role-readiness score, customized bridging timeline, and actionable fast-track plan.',
-              style: TextStyle(color: Color(0xffe2e8f0), fontSize: 16, height: 1.5),
+              style: TextStyle(
+                color: Color(0xffe2e8f0),
+                fontSize: 16,
+                height: 1.5,
+              ),
             ),
           ),
         ],
@@ -564,7 +706,10 @@ Latest user question (answer this directly): $prompt
                     : null,
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 6,
+                    horizontal: 8,
+                  ),
                   child: Row(
                     children: [
                       CircleAvatar(
@@ -572,16 +717,22 @@ Latest user question (answer this directly): $prompt
                         backgroundColor: i == _currentStep
                             ? teal
                             : i < _currentStep
-                                ? const Color(0xff10b981)
-                                : line,
+                            ? const Color(0xff10b981)
+                            : line,
                         child: i < _currentStep
-                            ? const Icon(Icons.check, size: 14, color: Colors.white)
+                            ? const Icon(
+                                Icons.check,
+                                size: 14,
+                                color: Colors.white,
+                              )
                             : Text(
                                 steps[i].$1,
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: i == _currentStep ? Colors.white : muted,
+                                  color: i == _currentStep
+                                      ? Colors.white
+                                      : muted,
                                 ),
                               ),
                       ),
@@ -592,7 +743,9 @@ Latest user question (answer this directly): $prompt
                             steps[i].$2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontWeight: i == _currentStep ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: i == _currentStep
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                               color: i == _currentStep ? ink : muted,
                               fontSize: 13,
                             ),
@@ -625,7 +778,10 @@ Latest user question (answer this directly): $prompt
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            heading('Step 1: Choose Your Target Role & Current Status', size: 22),
+            heading(
+              'Step 1: Choose Your Target Role & Current Status',
+              size: 22,
+            ),
             const SizedBox(height: 6),
             const Text(
               'Specify which career path you want to break into and your current learning starting point.',
@@ -636,7 +792,12 @@ Latest user question (answer this directly): $prompt
             // Target Role Picker
             const Text(
               'TARGET CAREER PATHWAY',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 0.8, color: ink),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                letterSpacing: 0.8,
+                color: ink,
+              ),
             ),
             const SizedBox(height: 10),
             Container(
@@ -656,7 +817,10 @@ Latest user question (answer this directly): $prompt
                       value: c['id'] as String,
                       child: Text(
                         '${c['name']}  —  (${c['category']})',
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: ink),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: ink,
+                        ),
                       ),
                     );
                   }).toList(),
@@ -688,7 +852,11 @@ Latest user question (answer this directly): $prompt
                   Expanded(
                     child: Text(
                       '${career['summary']} • Standard Entry: ${career['timeToEntry']?['minMonths'] ?? 6}–${career['timeToEntry']?['maxMonths'] ?? 12} months',
-                      style: const TextStyle(color: ink, fontSize: 13, height: 1.4),
+                      style: const TextStyle(
+                        color: ink,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -699,7 +867,12 @@ Latest user question (answer this directly): $prompt
             // Current Status
             const Text(
               'CURRENT LEARNER STATUS',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 0.8, color: ink),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                letterSpacing: 0.8,
+                color: ink,
+              ),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -738,7 +911,12 @@ Latest user question (answer this directly): $prompt
                         children: [
                           const Text(
                             'PRIOR TECH / WORK EXPERIENCE',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 0.8, color: ink),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              letterSpacing: 0.8,
+                              color: ink,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           Wrap(
@@ -751,10 +929,13 @@ Latest user question (answer this directly): $prompt
                                 selectedColor: teal.withValues(alpha: 0.15),
                                 labelStyle: TextStyle(
                                   color: selected ? teal : ink,
-                                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                                 ),
                                 onSelected: (val) {
-                                  if (val) setState(() => _yearsExperience = exp);
+                                  if (val)
+                                    setState(() => _yearsExperience = exp);
                                 },
                               );
                             }).toList(),
@@ -762,7 +943,10 @@ Latest user question (answer this directly): $prompt
                         ],
                       ),
                     ),
-                    if (isWide) const SizedBox(width: 24) else const SizedBox(height: 20),
+                    if (isWide)
+                      const SizedBox(width: 24)
+                    else
+                      const SizedBox(height: 20),
                     Expanded(
                       flex: isWide ? 1 : 0,
                       child: Column(
@@ -770,7 +954,12 @@ Latest user question (answer this directly): $prompt
                         children: [
                           Text(
                             'WEEKLY TIME COMMITMENT: $_weeklyHours HRS/WEEK',
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 0.8, color: ink),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              letterSpacing: 0.8,
+                              color: ink,
+                            ),
                           ),
                           Slider(
                             value: _weeklyHours.toDouble(),
@@ -779,7 +968,8 @@ Latest user question (answer this directly): $prompt
                             divisions: 7,
                             activeColor: teal,
                             label: '$_weeklyHours hrs/week',
-                            onChanged: (val) => setState(() => _weeklyHours = val.round()),
+                            onChanged: (val) =>
+                                setState(() => _weeklyHours = val.round()),
                           ),
                         ],
                       ),
@@ -793,16 +983,25 @@ Latest user question (answer this directly): $prompt
             // Additional Notes / Context
             const Text(
               'ADDITIONAL CONTEXT (OPTIONAL)',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 0.8, color: ink),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                letterSpacing: 0.8,
+                color: ink,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _notesController,
               maxLines: 2,
               decoration: InputDecoration(
-                hintText: 'e.g., "I know basic Python and Git, built a couple of scripts, want to break into Backend."',
+                hintText:
+                    'e.g., "I know basic Python and Git, built a couple of scripts, want to break into Backend."',
                 hintStyle: const TextStyle(color: muted, fontSize: 13),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: line)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: line),
+                ),
                 contentPadding: const EdgeInsets.all(14),
               ),
             ),
@@ -823,12 +1022,20 @@ Latest user question (answer this directly): $prompt
   }
 
   // STEP 1: Skill Rating Matrix
-  Widget _buildStep1Matrix(Map<String, dynamic> currentRecord, double screenWidth) {
+  Widget _buildStep1Matrix(
+    Map<String, dynamic> currentRecord,
+    double screenWidth,
+  ) {
     final career = currentRecord['career'] as Map<String, dynamic>;
-    final rawSkills = (career['skills'] as List? ?? []).cast<Map<String, dynamic>>();
+    final rawSkills = (career['skills'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
 
-    final coreSkills = rawSkills.where((s) => (s['type'] as String?) == 'core').toList();
-    final secondarySkills = rawSkills.where((s) => (s['type'] as String?) != 'core').toList();
+    final coreSkills = rawSkills
+        .where((s) => (s['type'] as String?) == 'core')
+        .toList();
+    final secondarySkills = rawSkills
+        .where((s) => (s['type'] as String?) != 'core')
+        .toList();
 
     return Card(
       child: Padding(
@@ -844,7 +1051,10 @@ Latest user question (answer this directly): $prompt
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      heading('Step 2: Rate Your Current Skill Levels', size: 22),
+                      heading(
+                        'Step 2: Rate Your Current Skill Levels',
+                        size: 22,
+                      ),
                       const SizedBox(height: 6),
                       Text(
                         'Be honest! Rate where you currently stand for ${career['name']}. This generates your customized gap report.',
@@ -875,21 +1085,46 @@ Latest user question (answer this directly): $prompt
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Text('Quick shortcuts: ', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: ink)),
-                  OutlinedButton(
-                    onPressed: () => _batchSetProficiency(SkillProficiency.none),
-                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-                    child: const Text('Set All None', style: TextStyle(fontSize: 11)),
+                  const Text(
+                    'Quick shortcuts: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: ink,
+                    ),
                   ),
                   OutlinedButton(
-                    onPressed: () => _batchSetProficiency(SkillProficiency.basic),
-                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-                    child: const Text('Set All Basic', style: TextStyle(fontSize: 11)),
+                    onPressed: () =>
+                        _batchSetProficiency(SkillProficiency.none),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      'Set All None',
+                      style: TextStyle(fontSize: 11),
+                    ),
                   ),
                   OutlinedButton(
-                    onPressed: () => _batchSetProficiency(SkillProficiency.intermediate),
-                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-                    child: const Text('Set All Hands-on', style: TextStyle(fontSize: 11)),
+                    onPressed: () =>
+                        _batchSetProficiency(SkillProficiency.basic),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      'Set All Basic',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () =>
+                        _batchSetProficiency(SkillProficiency.intermediate),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      'Set All Hands-on',
+                      style: TextStyle(fontSize: 11),
+                    ),
                   ),
                 ],
               ),
@@ -944,7 +1179,9 @@ Latest user question (answer this directly): $prompt
   Widget _buildSkillGroupHeader(String title, String subtitle, Color color) {
     return Container(
       padding: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: line, width: 1.5))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: line, width: 1.5)),
+      ),
       child: Row(
         children: [
           Container(width: 4, height: 20, color: color),
@@ -953,8 +1190,18 @@ Latest user question (answer this directly): $prompt
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: ink)),
-                Text(subtitle, style: const TextStyle(color: muted, fontSize: 12)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: ink,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: muted, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -976,7 +1223,11 @@ Latest user question (answer this directly): $prompt
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: currentVal != SkillProficiency.none ? currentVal.color.withValues(alpha: 0.3) : line),
+        border: Border.all(
+          color: currentVal != SkillProficiency.none
+              ? currentVal.color.withValues(alpha: 0.3)
+              : line,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -986,7 +1237,11 @@ Latest user question (answer this directly): $prompt
               Expanded(
                 child: Text(
                   name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: ink),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: ink,
+                  ),
                 ),
               ),
               Container(
@@ -997,7 +1252,11 @@ Latest user question (answer this directly): $prompt
                 ),
                 child: Text(
                   'Target: $level',
-                  style: const TextStyle(fontSize: 11, color: muted, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: muted,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -1012,7 +1271,11 @@ Latest user question (answer this directly): $prompt
               children: SkillProficiency.values.map((prof) {
                 final selected = currentVal == prof;
                 return ChoiceChip(
-                  avatar: Icon(prof.icon, size: 14, color: selected ? Colors.white : prof.color),
+                  avatar: Icon(
+                    prof.icon,
+                    size: 14,
+                    color: selected ? Colors.white : prof.color,
+                  ),
                   label: Text(prof.label),
                   selected: selected,
                   selectedColor: prof.color,
@@ -1038,16 +1301,25 @@ Latest user question (answer this directly): $prompt
                       onTap: () => setState(() => _userRatings[id] = prof),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: selected ? prof.color : canvas,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: selected ? prof.color : line),
+                          border: Border.all(
+                            color: selected ? prof.color : line,
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(prof.icon, size: 14, color: selected ? Colors.white : prof.color),
+                            Icon(
+                              prof.icon,
+                              size: 14,
+                              color: selected ? Colors.white : prof.color,
+                            ),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
@@ -1055,7 +1327,9 @@ Latest user question (answer this directly): $prompt
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                                   color: selected ? Colors.white : ink,
                                 ),
                               ),
@@ -1124,7 +1398,14 @@ Latest user question (answer this directly): $prompt
                                   color: report.tierColor,
                                 ),
                               ),
-                              const Text('MATCH', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: muted)),
+                              const Text(
+                                'MATCH',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: muted,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1134,20 +1415,31 @@ Latest user question (answer this directly): $prompt
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: report.tierColor,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
                               report.readinessTier,
-                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             report.career['name'],
-                            style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.bold, color: ink),
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: ink,
+                            ),
                           ),
                           Text(
                             'Based on ${report.items.length} role competencies',
@@ -1172,19 +1464,37 @@ Latest user question (answer this directly): $prompt
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.schedule, size: 16, color: Color(0xff166534)),
+                            Icon(
+                              Icons.schedule,
+                              size: 16,
+                              color: Color(0xff166534),
+                            ),
                             SizedBox(width: 6),
-                            Text('RECALIBRATED RUNWAY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xff166534))),
+                            Text(
+                              'RECALIBRATED RUNWAY',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xff166534),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
                         Text(
                           report.recalibratedTimeline,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xff166534)),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xff166534),
+                          ),
                         ),
                         Text(
                           'Estimated for ${report.weeklyHours} hours/week',
-                          style: const TextStyle(fontSize: 11, color: Color(0xff15803d)),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xff15803d),
+                          ),
                         ),
                       ],
                     ),
@@ -1212,8 +1522,20 @@ Latest user question (answer this directly): $prompt
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Save this Fast-Track Roadmap to My Journey', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xff065f46))),
-                    Text('Auto-saves ${report.career['name']} and tracks your gap-closing progress.', style: const TextStyle(color: Color(0xff047857), fontSize: 12)),
+                    const Text(
+                      'Save this Fast-Track Roadmap to My Journey',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xff065f46),
+                      ),
+                    ),
+                    Text(
+                      'Auto-saves ${report.career['name']} and tracks your gap-closing progress.',
+                      style: const TextStyle(
+                        color: Color(0xff047857),
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1221,7 +1543,9 @@ Latest user question (answer this directly): $prompt
                 onPressed: () => _applyToJourney(report),
                 icon: const Icon(Icons.bookmark_add, size: 16),
                 label: const Text('Apply Plan'),
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xff059669)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xff059669),
+                ),
               ),
             ],
           ),
@@ -1247,25 +1571,52 @@ Latest user question (answer this directly): $prompt
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.warning_amber_rounded, color: Color(0xffe11d48), size: 20),
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Color(0xffe11d48),
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Critical Skill Gaps (${report.criticalGaps.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: ink)),
+                              Text(
+                                'Critical Skill Gaps (${report.criticalGaps.length})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: ink,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 6),
-                          const Text('High-priority core competencies you must build to pass screenings.', style: TextStyle(color: muted, fontSize: 12)),
+                          const Text(
+                            'High-priority core competencies you must build to pass screenings.',
+                            style: TextStyle(color: muted, fontSize: 12),
+                          ),
                           const SizedBox(height: 14),
                           if (report.criticalGaps.isEmpty)
-                            const Text('No critical core gaps identified! You have solid baseline fundamentals.', style: TextStyle(color: Color(0xff059669), fontSize: 13))
+                            const Text(
+                              'No critical core gaps identified! You have solid baseline fundamentals.',
+                              style: TextStyle(
+                                color: Color(0xff059669),
+                                fontSize: 13,
+                              ),
+                            )
                           else
                             for (final gap in report.criticalGaps)
-                              _buildGapPill(gap, const Color(0xfffee2e2), const Color(0xff991b1b)),
+                              _buildGapPill(
+                                gap,
+                                const Color(0xfffee2e2),
+                                const Color(0xff991b1b),
+                              ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                if (isWide) const SizedBox(width: 16) else const SizedBox(height: 16),
+                if (isWide)
+                  const SizedBox(width: 16)
+                else
+                  const SizedBox(height: 16),
 
                 // Strengths
                 Expanded(
@@ -1278,19 +1629,40 @@ Latest user question (answer this directly): $prompt
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.check_circle_outline, color: Color(0xff059669), size: 20),
+                              const Icon(
+                                Icons.check_circle_outline,
+                                color: Color(0xff059669),
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Mastered Strengths (${report.masteredSkills.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: ink)),
+                              Text(
+                                'Mastered Strengths (${report.masteredSkills.length})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: ink,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 6),
-                          const Text('Competencies you already meet. Highlight these on your resume!', style: TextStyle(color: muted, fontSize: 12)),
+                          const Text(
+                            'Competencies you already meet. Highlight these on your resume!',
+                            style: TextStyle(color: muted, fontSize: 12),
+                          ),
                           const SizedBox(height: 14),
                           if (report.masteredSkills.isEmpty)
-                            const Text('None yet! Starting from scratch is completely normal.', style: TextStyle(color: muted, fontSize: 13))
+                            const Text(
+                              'None yet! Starting from scratch is completely normal.',
+                              style: TextStyle(color: muted, fontSize: 13),
+                            )
                           else
                             for (final s in report.masteredSkills)
-                              _buildGapPill(s, const Color(0xffdcfce7), const Color(0xff166534)),
+                              _buildGapPill(
+                                s,
+                                const Color(0xffdcfce7),
+                                const Color(0xff166534),
+                              ),
                         ],
                       ),
                     ),
@@ -1311,7 +1683,10 @@ Latest user question (answer this directly): $prompt
               children: [
                 heading('Your Fast-Track Bridging Blueprint', size: 18),
                 const SizedBox(height: 6),
-                const Text('How to tailor Pathfinder’s roadmap to your current background without wasting time.', style: TextStyle(color: muted, fontSize: 13)),
+                const Text(
+                  'How to tailor Pathfinder’s roadmap to your current background without wasting time.',
+                  style: TextStyle(color: muted, fontSize: 13),
+                ),
                 const SizedBox(height: 16),
 
                 if (report.skippableStages.isNotEmpty) ...[
@@ -1329,7 +1704,11 @@ Latest user question (answer this directly): $prompt
                         Expanded(
                           child: Text(
                             'Recommended Stages to Fast-Forward: ${report.skippableStages.join(', ')}',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: ink),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: ink,
+                            ),
                           ),
                         ),
                       ],
@@ -1352,11 +1731,16 @@ Latest user question (answer this directly): $prompt
                       Expanded(
                         child: Text(
                           'Recommended Starting Point: ${report.recommendedStartingStage?['name'] ?? 'Stage 1'} (${(report.recommendedStartingStage?['tasks'] as List? ?? []).length} focused tasks)',
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xff0f766e)),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: Color(0xff0f766e),
+                          ),
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.go('/career/${report.career['id']}'),
+                        onPressed: () =>
+                            context.go('/career/${report.career['id']}'),
                         child: const Text('View Full Roadmap'),
                       ),
                     ],
@@ -1396,11 +1780,21 @@ Latest user question (answer this directly): $prompt
           Icon(item.userProficiency.icon, size: 16, color: textColor),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(item.name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: textColor)),
+            child: Text(
+              item.name,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: textColor,
+              ),
+            ),
           ),
           Text(
             'Current: ${item.userProficiency.label}',
-            style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+            style: TextStyle(
+              fontSize: 11,
+              color: textColor.withValues(alpha: 0.8),
+            ),
           ),
         ],
       ),
@@ -1448,19 +1842,34 @@ Latest user question (answer this directly): $prompt
               runSpacing: 8,
               children: [
                 ActionChip(
-                  label: const Text('Bridging project idea', style: TextStyle(fontSize: 12)),
+                  label: const Text(
+                    'Bridging project idea',
+                    style: TextStyle(fontSize: 12),
+                  ),
                   avatar: const Icon(Icons.lightbulb_outline, size: 14),
-                  onPressed: () => _sendAgentMessage('What is a single project I can build to bridge my top skill gaps?'),
+                  onPressed: () => _sendAgentMessage(
+                    'What is a single project I can build to bridge my top skill gaps?',
+                  ),
                 ),
                 ActionChip(
-                  label: const Text('Interview questions to prepare', style: TextStyle(fontSize: 12)),
+                  label: const Text(
+                    'Interview questions to prepare',
+                    style: TextStyle(fontSize: 12),
+                  ),
                   avatar: const Icon(Icons.help_outline, size: 14),
-                  onPressed: () => _sendAgentMessage('What technical interview questions will employers ask regarding my missing skills?'),
+                  onPressed: () => _sendAgentMessage(
+                    'What technical interview questions will employers ask regarding my missing skills?',
+                  ),
                 ),
                 ActionChip(
-                  label: const Text('Weekly study breakdown', style: TextStyle(fontSize: 12)),
+                  label: const Text(
+                    'Weekly study breakdown',
+                    style: TextStyle(fontSize: 12),
+                  ),
                   avatar: const Icon(Icons.calendar_today, size: 14),
-                  onPressed: () => _sendAgentMessage('Give me a weekly study schedule for my $_weeklyHours hours/week to close these gaps quickly.'),
+                  onPressed: () => _sendAgentMessage(
+                    'Give me a weekly study schedule for my $_weeklyHours hours/week to close these gaps quickly.',
+                  ),
                 ),
               ],
             ),
@@ -1480,7 +1889,9 @@ Latest user question (answer this directly): $prompt
                     decoration: BoxDecoration(
                       color: msg.fromUser ? const Color(0xffe7f3ef) : canvas,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: msg.fromUser ? const Color(0xff99f6e4) : line),
+                      border: Border.all(
+                        color: msg.fromUser ? const Color(0xff99f6e4) : line,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1490,15 +1901,21 @@ Latest user question (answer this directly): $prompt
                             Icon(
                               msg.fromUser ? Icons.person : Icons.auto_awesome,
                               size: 14,
-                              color: msg.fromUser ? teal : const Color(0xff0284c7),
+                              color: msg.fromUser
+                                  ? teal
+                                  : const Color(0xff0284c7),
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              msg.fromUser ? 'You' : 'Skill Gap Diagnostic Agent',
+                              msg.fromUser
+                                  ? 'You'
+                                  : 'Skill Gap Diagnostic Agent',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: msg.fromUser ? teal : const Color(0xff0284c7),
+                                color: msg.fromUser
+                                    ? teal
+                                    : const Color(0xff0284c7),
                               ),
                             ),
                           ],
@@ -1506,7 +1923,11 @@ Latest user question (answer this directly): $prompt
                         const SizedBox(height: 6),
                         SelectableText(
                           msg.text,
-                          style: const TextStyle(fontSize: 13, height: 1.45, color: ink),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.45,
+                            color: ink,
+                          ),
                         ),
                       ],
                     ),
@@ -1519,9 +1940,16 @@ Latest user question (answer this directly): $prompt
               const SizedBox(height: 8),
               const Row(
                 children: [
-                  SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                   SizedBox(width: 10),
-                  Text('Agent is analyzing your profile...', style: TextStyle(fontSize: 12, color: muted)),
+                  Text(
+                    'Agent is analyzing your profile...',
+                    style: TextStyle(fontSize: 12, color: muted),
+                  ),
                 ],
               ),
             ],
@@ -1535,17 +1963,26 @@ Latest user question (answer this directly): $prompt
                   child: TextField(
                     controller: _agentInputController,
                     decoration: InputDecoration(
-                      hintText: 'Ask about ${report.career['name']} or its field...',
+                      hintText:
+                          'Ask about ${report.career['name']} or its field...',
                       hintStyle: const TextStyle(color: muted, fontSize: 13),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: line)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: const BorderSide(color: line),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
                     ),
                     onSubmitted: (val) => _sendAgentMessage(val),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  onPressed: _agentSending ? null : () => _sendAgentMessage(_agentInputController.text),
+                  onPressed: _agentSending
+                      ? null
+                      : () => _sendAgentMessage(_agentInputController.text),
                   icon: const Icon(Icons.send, color: teal),
                 ),
               ],
