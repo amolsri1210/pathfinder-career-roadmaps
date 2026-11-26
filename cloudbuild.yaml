@@ -10,17 +10,17 @@ steps:
       - '--build-arg=FIREBASE_APP_ID=${_FIREBASE_APP_ID}'
       - '--build-arg=FIREBASE_APPCHECK_SITE_KEY=${_FIREBASE_APPCHECK_SITE_KEY}'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/pathfinder:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/pathfinder/pathfinder:$COMMIT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/pathfinder:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/pathfinder/pathfinder:latest'
       - '.'
 
-  # 2. Push image to Container Registry / Artifact Registry
+  # 2. Push image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/pathfinder:$COMMIT_SHA']
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/pathfinder/pathfinder:$COMMIT_SHA']
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/pathfinder:latest']
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/pathfinder/pathfinder:latest']
 
   # 3. Deploy image to Google Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -30,7 +30,7 @@ steps:
       - 'deploy'
       - 'pathfinder'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/pathfinder:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/pathfinder/pathfinder:$COMMIT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -38,8 +38,8 @@ steps:
       - '--allow-unauthenticated'
 
 images:
-  - 'gcr.io/$PROJECT_ID/pathfinder:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/pathfinder:latest'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/pathfinder/pathfinder:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/pathfinder/pathfinder:latest'
 
 substitutions:
   _FIREBASE_API_KEY: ''

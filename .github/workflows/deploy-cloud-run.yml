@@ -6,9 +6,11 @@ on:
       - main
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }} # Add your Google Cloud Project ID in GitHub Secrets
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE_NAME: pathfinder
   REGION: us-central1
+  AR_REPOSITORY: pathfinder
+  GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
 
 jobs:
   deploy:
@@ -22,18 +24,50 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Google Cloud Auth
+      - name: Validate deployment configuration
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_APPCHECK_SITE_KEY: ${{ secrets.FIREBASE_APPCHECK_SITE_KEY }}
+        run: |
+          missing=()
+          for name in GCP_PROJECT_ID FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_MESSAGING_SENDER_ID FIREBASE_APP_ID FIREBASE_APPCHECK_SITE_KEY; do
+            if [[ -z "${!name}" ]]; then missing+=("$name"); fi
+          done
+          if [[ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ]]; then
+            [[ -n "$GCP_SERVICE_ACCOUNT" ]] || missing+=(GCP_SERVICE_ACCOUNT)
+          else
+            [[ -n "$GCP_SA_KEY" ]] || missing+=("GCP_WORKLOAD_IDENTITY_PROVIDER + GCP_SERVICE_ACCOUNT (recommended) or GCP_SA_KEY")
+          fi
+          if (( ${#missing[@]} )); then
+            printf 'Missing GitHub Actions configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Authenticate with Workload Identity Federation
+        if: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER != '' }}
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          credentials_json: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' && secrets.GCP_SA_KEY || '' }}
+
+      - name: Authenticate with service account key
+        if: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER == '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Authorize Docker push
-        run: gcloud auth configure-docker --quiet
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       - name: Build and Push Docker image
         env:
@@ -44,7 +78,7 @@ jobs:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_APPCHECK_SITE_KEY: ${{ secrets.FIREBASE_APPCHECK_SITE_KEY }}
         run: |
-          IMAGE_TAG="gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
           docker build \
             --build-arg="FIREBASE_API_KEY=$FIREBASE_API_KEY" \
             --build-arg="FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN" \
@@ -53,15 +87,16 @@ jobs:
             --build-arg="FIREBASE_APP_ID=$FIREBASE_APP_ID" \
             --build-arg="FIREBASE_APPCHECK_SITE_KEY=$FIREBASE_APPCHECK_SITE_KEY" \
             -t "$IMAGE_TAG" \
-            -t "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest" \
             .
           docker push "$IMAGE_TAG"
-          docker push "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest"
+          docker tag "$IMAGE_TAG" "${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPOSITORY }}/${{ env.SERVICE_NAME }}:latest"
+          docker push "${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPOSITORY }}/${{ env.SERVICE_NAME }}:latest"
 
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.AR_REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
           flags: '--allow-unauthenticated'
